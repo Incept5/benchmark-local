@@ -72,7 +72,7 @@ Configs are TOML files in `configs/`. The default ships with a spread of popular
 [benchmark]
 warmup_runs = 3          # discarded before measurement
 measured_runs = 10        # used for statistics
-max_tokens = 256          # max tokens per generation
+max_tokens = 2048         # default max tokens (prompts can override)
 temperature = 0.0         # 0.0 = deterministic
 randomize_order = true    # shuffle variants to reduce thermal bias
 prompt_suite = "prompts/suite.toml"
@@ -118,6 +118,7 @@ uv run bench --config configs/my_bench.toml
 
 ### Tips
 
+- **Per-prompt max_tokens**: Each prompt in the suite can set its own `max_tokens` to reflect realistic output lengths (64 for short QA, 4096 for essays). The config-level `max_tokens` is the fallback default.
 - **Families with one variant** still get perplexity and MMLU but skip output similarity comparison.
 - **Vision models** (`kind = "vision"`) run all prompts including image-based ones; text models skip image prompts automatically.
 - **Large models** that exceed available memory are caught gracefully — the runner logs the OOM and continues to the next variant.
@@ -153,6 +154,21 @@ uv run bench --config configs/my_bench.toml
 - System info, library versions, and config snapshot saved in every result file
 - Power measured per-variant (not per-run) to reduce noise
 
+### Running a Fair Benchmark
+
+For reliable, reproducible results:
+
+1. **Close all other applications** — browsers, IDEs, chat clients, music players. Any app consuming CPU/GPU/memory will affect measurements.
+2. **Disable background processes** — pause cloud sync (iCloud, Dropbox), Time Machine backups, Spotlight indexing, and software updates.
+3. **Plug in your Mac** — battery mode throttles performance. Always benchmark on AC power.
+4. **Let the machine cool down** — if you've been running heavy workloads, wait 5-10 minutes before starting. Thermal throttling skews results.
+5. **Don't touch the machine during the run** — even moving windows or typing causes CPU spikes.
+6. **Check Activity Monitor** before starting — CPU idle should be >95%, memory pressure should be green.
+7. **Run the same config twice** — compare results across runs. If metrics differ by more than 5%, something was interfering. The CV% column in the report flags measurements with >10% variance.
+8. **Close the terminal's other tabs/panes** — terminal emulators rendering output consume measurable CPU.
+
+The benchmark randomizes variant order within families to reduce thermal bias, but consistent ambient conditions still matter. If you're comparing results across machines, also ensure similar room temperature.
+
 ## Default Models
 
 The default config (`configs/default.toml`) includes:
@@ -168,18 +184,46 @@ The default config (`configs/default.toml`) includes:
 | Llama 3.1 70B Instruct | 70B | 4bit |
 | Qwen2.5 VL 7B Instruct | 7B | 8bit, 4bit (vision) |
 
+## Prompt Suite
+
+14 prompts covering realistic workloads with varied context and output lengths:
+
+| Prompt | Category | Input | Max Tokens |
+|--------|----------|-------|------------|
+| short-qa | Short QA | 10 words | 64 |
+| medium-explain | Explanation | 49 words | 1,024 |
+| long-essay | Essay | 146 words | 4,096 |
+| code-gen | Code generation | 121 words | 2,048 |
+| reasoning | Math/logic | 152 words | 2,048 |
+| summarize-long | Summarization | ~900 words | 512 |
+| multi-step | Architecture design | 213 words | 3,072 |
+| vision-chart | Chart analysis | image + prompt | 1,024 |
+| vision-photo | Photo description | image + prompt | 1,024 |
+| vision-diagram | Diagram explanation | image + prompt | 1,024 |
+| vision-document | Document reading | image + prompt | 2,048 |
+| vision-screenshot | Code screenshot | image + prompt | 1,024 |
+| vision-handwriting | Handwriting OCR | image + prompt | 1,024 |
+| vision-infographic | Infographic analysis | image + prompt | 1,024 |
+
+Text models run the 7 text prompts. Vision models run all 14. All vision test images are real photographs and documents sourced from Wikimedia Commons (see `prompts/images/ATTRIBUTIONS.md`).
+
 ## Power Measurement
 
 Power metrics (tokens/watt) use [zeus-ml](https://github.com/ml-energy/zeus) which reads Apple Silicon power counters via IOKit. No sudo required. If zeus cannot access power counters on your machine, the benchmark runs normally — power metrics are simply reported as unavailable.
 
 ## Results
 
-Each run produces a JSON file in `results/` containing:
+Each run produces a **JSON file** and a **self-contained HTML report** in `results/`.
 
-- **System info** — chip, memory, OS, Python/MLX versions
-- **Config snapshot** — exact parameters and model list used
-- **Raw runs** — every individual generation with TTFT, tok/s, memory, full output text
-- **Quality** — perplexity, MMLU accuracy, output similarity per variant
+The HTML report includes:
+- System info dashboard (chip, memory, versions, benchmark parameters)
+- Sortable summary table (click column headers)
+- Per-family quantization comparison with delta percentages and bar charts
+- Per-prompt breakdown with 95% CI and CV% flags
+- Power breakdown table
+- Collapsible raw JSON
+
+The JSON file contains:
 - **Aggregated stats** — median, mean, std, 95% CI, CV% per metric
 - **Power** — watts and joules per variant
 

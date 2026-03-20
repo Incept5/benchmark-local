@@ -1,36 +1,205 @@
+# === Text prompts (run by all models) ===
+# Each prompt has a per-prompt max_tokens that reflects realistic output length for the task.
+# If omitted, the config-level max_tokens (default 2048) is used.
+
+# Short output — tests TTFT, prompt processing speed
 [[prompt]]
 id = "short-qa"
 category = "short-qa"
+max_tokens = 64
 text = "What is the capital of France? Answer in one sentence."
 
+# Medium output — typical chatbot response
 [[prompt]]
 id = "medium-explain"
 category = "medium-explain"
-text = "Explain how a transformer neural network processes a sequence of tokens, including the role of attention mechanisms. Be thorough but concise."
+max_tokens = 1024
+text = "Explain how a transformer neural network processes a sequence of tokens, including the role of attention mechanisms, positional encoding, multi-head attention, feed-forward layers, and layer normalization. Cover both the encoder and decoder architectures, and explain how the model learns to attend to relevant parts of the input during training."
 
+# Long output — sustained generation throughput
 [[prompt]]
 id = "long-essay"
 category = "long-essay"
-text = "Write a detailed essay on the history and future of renewable energy, covering solar, wind, and nuclear fusion. Discuss technological breakthroughs, economic factors, and environmental impact."
+max_tokens = 4096
+text = "Write a comprehensive essay on the history and future of renewable energy. Cover the following topics in depth: (1) The evolution of solar photovoltaic technology from Bell Labs in 1954 to modern perovskite cells, including cost curves and efficiency milestones. (2) The development of onshore and offshore wind energy, including turbine scaling trends and the role of floating platforms. (3) The current state of nuclear fusion research, including ITER, NIF's ignition milestone, and private ventures like Commonwealth Fusion Systems. (4) Grid-scale energy storage technologies: lithium-ion, flow batteries, pumped hydro, compressed air, and green hydrogen. (5) The economic and geopolitical implications of the energy transition, including stranded assets, critical mineral supply chains, and the impact on fossil fuel-dependent economies. (6) Policy frameworks that have accelerated deployment: feed-in tariffs, renewable portfolio standards, carbon pricing, and the Inflation Reduction Act. Provide specific data points, dates, and figures where possible."
 
+# Code generation — structured output with logic
 [[prompt]]
 id = "code-gen"
 category = "code-gen"
-text = "Write a Python function that implements a binary search tree with insert, search, and in-order traversal methods. Include type hints and docstrings."
+max_tokens = 2048
+text = """Write a complete Python module that implements a thread-safe LRU (Least Recently Used) cache with the following requirements:
 
+1. Generic types for keys and values using TypeVar
+2. Configurable maximum capacity
+3. O(1) get and put operations using a combination of a dictionary and doubly-linked list
+4. Thread safety using a reentrant lock
+5. TTL (time-to-live) support: entries expire after a configurable duration
+6. Statistics tracking: hit count, miss count, eviction count, hit rate
+7. A `purge_expired()` method that removes all stale entries
+8. Comprehensive docstrings and type hints
+9. A `__repr__` that shows capacity, current size, and hit rate
+10. Unit tests using pytest that verify correctness under concurrent access
+
+Include all imports and make it a self-contained, runnable module."""
+
+# Reasoning — chain-of-thought problem solving
 [[prompt]]
 id = "reasoning"
 category = "reasoning"
-text = "A farmer has 17 sheep. All but 9 die. How many sheep does the farmer have left? Explain your reasoning step by step."
+max_tokens = 2048
+text = """Solve the following problem step by step, showing all your work:
 
+A company has three warehouses (A, B, C) that supply four retail stores (1, 2, 3, 4). The supply capacities are: A=300 units, B=250 units, C=450 units. The demand requirements are: Store 1=200, Store 2=175, Store 3=350, Store 4=275.
+
+The shipping costs per unit are:
+- A to 1: $8, A to 2: $6, A to 3: $10, A to 4: $9
+- B to 1: $9, B to 2: $12, B to 3: $7, B to 4: $8
+- C to 1: $14, C to 2: $9, C to 3: $16, C to 4: $5
+
+Find the optimal shipping plan that minimizes total transportation cost. Use the Vogel's Approximation Method to find an initial feasible solution, then verify whether it can be improved using the MODI (Modified Distribution) method. Show the complete allocation table and total cost at each step."""
+
+# Long context input — tests prompt processing with large input
+[[prompt]]
+id = "summarize-long"
+category = "summarize-long"
+max_tokens = 512
+text = """Summarize the following technical document in 3-5 key bullet points:
+
+## Background
+
+Large Language Models (LLMs) have transformed natural language processing through the scaling of transformer-based architectures. The key insight driving modern LLM development is the scaling hypothesis: that simply increasing model size, training data, and compute leads to qualitatively better capabilities. This was first observed systematically in the GPT-3 paper, which demonstrated that a 175B parameter model could perform few-shot learning across a wide range of tasks without fine-tuning.
+
+The training process for LLMs involves several distinct phases. Pre-training on large text corpora teaches the model general language understanding and world knowledge through next-token prediction. This phase typically requires thousands of GPUs running for weeks or months, consuming megawatt-hours of electricity. The resulting base model can generate coherent text but is not aligned with user intent.
+
+Post-training alignment, typically through Reinforcement Learning from Human Feedback (RLHF) or Direct Preference Optimization (DPO), transforms the base model into an assistant that follows instructions and refuses harmful requests. This phase requires orders of magnitude less compute than pre-training but has an outsized impact on the model's utility. Constitutional AI (CAI) offers an alternative approach where the model critiques and revises its own outputs based on a set of principles.
+
+## Architecture Innovations
+
+The original transformer architecture from "Attention Is All You Need" (2017) has been modified extensively. Modern LLMs typically use decoder-only architectures (dropping the encoder) with several key modifications:
+
+1. Rotary Position Embeddings (RoPE) replace learned or sinusoidal positional encodings, enabling better length generalization. RoPE encodes position information by rotating query and key vectors in the attention mechanism, allowing the model to extrapolate to sequences longer than those seen during training.
+
+2. Grouped Query Attention (GQA) reduces the memory bandwidth bottleneck during inference by sharing key-value heads across multiple query heads. This provides a middle ground between Multi-Head Attention (one KV head per query head) and Multi-Query Attention (one KV head shared across all query heads). Llama 2 70B and subsequent models use GQA with 8 KV heads shared across 64 query heads.
+
+3. SwiGLU activation functions replace the standard ReLU or GELU in feed-forward layers, providing better training dynamics at the cost of slightly more parameters. The gating mechanism allows the network to learn which information to pass through.
+
+4. RMSNorm (Root Mean Square Layer Normalization) replaces standard LayerNorm, removing the mean-centering operation for improved training stability and inference speed. Pre-normalization (applying norm before attention and feed-forward layers rather than after) is now standard.
+
+5. Flash Attention and its successors dramatically reduce the memory requirements of attention computation from O(n²) to O(n) by computing attention in tiles and avoiding materialization of the full attention matrix. This enables training on much longer sequences without running out of memory.
+
+## Mixture of Experts
+
+Mixture of Experts (MoE) architectures represent a paradigm shift in LLM scaling. Instead of activating all parameters for every token, MoE models route each token to a subset of specialized "expert" feed-forward networks. A learned router network assigns tokens to the top-k experts (typically k=2). This allows models to have very large total parameter counts while maintaining reasonable inference costs.
+
+Mixtral 8x7B, for example, has 47B total parameters but only activates 13B per token, achieving performance comparable to Llama 2 70B at a fraction of the inference cost. The DeepSeek-V2 and Qwen 3 series pushed this further with fine-grained experts and shared expert architectures.
+
+Key challenges in MoE training include load balancing (ensuring all experts are utilized), expert collapse (where the router learns to only use a few experts), and the communication overhead in distributed training since different experts may reside on different devices.
+
+## Inference Optimization
+
+Deploying LLMs efficiently requires extensive optimization:
+
+- KV-cache management: During autoregressive generation, key and value tensors from previous tokens are cached to avoid recomputation. This cache grows linearly with sequence length and can consume tens of gigabytes for long contexts. Paged attention (vLLM) and ring attention enable efficient KV-cache management across multiple requests.
+
+- Quantization: Reducing weight precision from FP16 to INT8 or INT4 cuts memory requirements by 2-4x with minimal quality loss. GPTQ, AWQ, and GGML quantization schemes each make different tradeoffs between quality preservation and inference speed. Recent work on 2-bit quantization pushes the boundary further.
+
+- Speculative decoding: Using a smaller draft model to propose multiple tokens, then verifying them in parallel with the large model. This can achieve 2-3x speedup without any quality loss since the large model always makes the final decision.
+
+- Continuous batching: Instead of waiting for all requests in a batch to complete, new requests are inserted as soon as slots become available. This dramatically improves throughput in production serving.
+
+## Evaluation and Benchmarks
+
+Evaluating LLMs remains challenging. Standard benchmarks include MMLU (knowledge), HumanEval (code generation), GSM8K (math reasoning), TruthfulQA (factual accuracy), and MT-Bench (multi-turn conversation quality). However, benchmark saturation is a growing concern as models achieve near-perfect scores on many established benchmarks, leading to the development of harder evaluations like GPQA and FrontierMath.
+
+The relationship between perplexity (intrinsic evaluation) and downstream task performance is complex and non-linear. A model with lower perplexity generally performs better, but the correlation weakens at the frontier. Emergent capabilities—abilities that appear suddenly as models scale—further complicate evaluation, as linear extrapolation of benchmark scores can fail to predict qualitative jumps in capability."""
+
+# Multi-turn / instruction following — tests coherent extended generation
+[[prompt]]
+id = "multi-step"
+category = "multi-step"
+max_tokens = 3072
+text = """You are a senior software architect. A startup has asked you to design the backend architecture for a real-time collaborative document editor (similar to Google Docs). The system needs to support:
+
+- 10,000 concurrent users editing simultaneously
+- Real-time character-by-character sync with < 100ms latency
+- Offline editing with automatic conflict resolution when reconnecting
+- Version history with the ability to revert to any previous state
+- Rich text formatting, embedded images, and tables
+- Comments and suggestions workflow
+- Access control (owner, editor, commenter, viewer roles)
+- End-to-end encryption option for sensitive documents
+
+Provide a complete architectural design document covering:
+
+1. System architecture overview with a description of all major components
+2. Choice of CRDT vs OT for conflict resolution, with detailed justification
+3. Data model for documents, operations, and version history
+4. Real-time sync protocol design (WebSocket message format, operation ordering)
+5. Storage layer design (hot storage for active docs, cold storage for history)
+6. Authentication and authorization architecture
+7. Horizontal scaling strategy for 10K+ concurrent editors on a single document
+8. Offline-first architecture with sync queue design
+9. End-to-end encryption approach that preserves collaborative editing
+10. Estimated infrastructure costs at 100K, 1M, and 10M monthly active users
+
+Be specific about technology choices (databases, message queues, frameworks) and justify each decision."""
+
+# === Vision prompts (run by vision models only) ===
+# All images sourced from Wikimedia Commons under free licenses.
+
+# Bar chart of per-capita GDP across South Asian economies (Public Domain)
 [[prompt]]
 id = "vision-chart"
 category = "vision-chart"
+max_tokens = 1024
 image = "prompts/images/chart.png"
-text = "Analyze this chart. What trends do you observe? What conclusions can be drawn from the data?"
+text = "Analyze this economic chart in detail. Which countries are shown and how do their per-capita GDPs compare? What trends are visible over time? Which economy grew the fastest? Identify specific data points and values visible in the chart."
 
+# Mountain lake in Nepal's Chola Valley, Himalayas (CC BY 4.0)
 [[prompt]]
 id = "vision-photo"
 category = "vision-photo"
+max_tokens = 1024
 image = "prompts/images/photo.jpg"
-text = "Describe this image in detail. What objects, people, or scenes are visible? What mood does it convey?"
+text = "Describe this photograph in detail. What geographical features are visible? Estimate the altitude and season. What can you infer about the location and climate? Describe the composition, lighting, and any notable elements."
+
+# Data visualization process flowchart (CC BY-SA 3.0)
+[[prompt]]
+id = "vision-diagram"
+category = "vision-diagram"
+max_tokens = 1024
+image = "prompts/images/diagram.png"
+text = "Explain the process shown in this diagram. What are the main stages, how do they connect, and what is the overall workflow from start to finish? Identify all labeled components and their relationships."
+
+# Periodic Table of the Elements with pictures (CC BY-SA 4.0)
+[[prompt]]
+id = "vision-document"
+category = "vision-document"
+max_tokens = 2048
+image = "prompts/images/document.png"
+text = "Examine this document in detail. What information is being presented and how is it structured? Read specific entries, identify the organizational system used, and provide a thorough description of the content. Extract at least 10 specific data points visible in the image."
+
+# Notepad++ code editor with C source code (GPL)
+[[prompt]]
+id = "vision-screenshot"
+category = "vision-screenshot"
+max_tokens = 1024
+image = "prompts/images/screenshot.png"
+text = "Analyze this screenshot. What application is shown? What programming language is the code written in? Transcribe the visible code, describe what it does, and identify any notable features of the editor's configuration."
+
+# Handwritten note on Pennsylvania Railroad paper, early 1900s (Public Domain)
+[[prompt]]
+id = "vision-handwriting"
+category = "vision-handwriting"
+max_tokens = 1024
+image = "prompts/images/handwriting.jpg"
+text = "Transcribe the handwritten text in this image as accurately as possible. What can you determine about the era, context, and purpose of this document? Describe the paper, letterhead, and any other visual details."
+
+# World total energy consumption by source (CC0)
+[[prompt]]
+id = "vision-infographic"
+category = "vision-infographic"
+max_tokens = 1024
+image = "prompts/images/infographic.png"
+text = "Interpret this infographic about energy consumption. What data is being presented? Break down the different energy sources, their relative proportions, and what trends the visualization reveals. Extract all specific numbers and percentages visible."

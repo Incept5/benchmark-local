@@ -70,11 +70,19 @@ def _run_cli(config: BenchmarkConfig) -> None:
         if event.stage == "loading":
             print(f"\n>>> Loading {event.variant_repo} ({event.variant_quant})")
         elif event.stage == "warmup":
-            print(
-                f"  Warmup {event.run_index}/{event.total_runs} "
-                f"[{event.prompt_id}]",
-                end="\r",
-            )
+            if event.current_result:
+                r = event.current_result
+                print(
+                    f"  Warmup {event.run_index}/{event.total_runs} "
+                    f"[{event.prompt_id}] "
+                    f"TTFT={r.ttft_ms:.1f}ms "
+                    f"tok/s={r.tokens_per_sec:.1f}"
+                )
+            else:
+                print(
+                    f"  Warmup {event.run_index}/{event.total_runs} "
+                    f"[{event.prompt_id}]"
+                )
         elif event.stage == "measuring" and event.current_result:
             r = event.current_result
             print(

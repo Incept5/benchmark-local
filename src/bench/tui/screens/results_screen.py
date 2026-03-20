@@ -199,12 +199,15 @@ class ResultsScreen(Screen):
             self.action_export()
 
     def action_export(self) -> None:
-        """Export results to JSON."""
+        """Export results to JSON and HTML."""
         session = self.session
         if not session:
             return
 
+        from bench.report import generate_report
         from bench.store import save_session
-        path = save_session(session, session.config_snapshot.get("output_dir", "results"))
-        log = self.query("RichLog")
-        self.notify(f"Exported to {path}")
+
+        output_dir = session.config_snapshot.get("output_dir", "results")
+        path = save_session(session, output_dir)
+        html_path = generate_report(session, path.with_suffix(".html"))
+        self.notify(f"Exported to {path}\nHTML report: {html_path}")

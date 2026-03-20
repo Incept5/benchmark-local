@@ -13,6 +13,7 @@ class Prompt:
     category: str
     text: str
     image: str | None = None
+    max_tokens: int | None = None  # per-prompt override; None = use config default
 
     @property
     def is_vision(self) -> bool:
@@ -33,6 +34,7 @@ def load_suite(path: str | Path) -> list[Prompt]:
                 category=p["category"],
                 text=p["text"],
                 image=p.get("image"),
+                max_tokens=p.get("max_tokens"),
             )
         )
     return prompts

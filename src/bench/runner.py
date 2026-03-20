@@ -147,11 +147,18 @@ def run_benchmark(
         variant_results=all_variant_results,
     )
 
-    # Save
+    # Save JSON
     output_path = save_session(session, config.output_dir)
+
+    # Generate HTML report
+    from bench.report import generate_report
+
+    html_path = output_path.with_suffix(".html")
+    generate_report(session, html_path)
+
     on_progress(ProgressEvent(
         stage="done",
-        message=f"Results saved to {output_path}",
+        message=f"Results saved to {output_path}\nHTML report: {html_path}",
         overall_progress=1.0,
     ))
 
@@ -220,9 +227,20 @@ def _run_variant(
             try:
                 result = measure_one(
                     variant, family.kind, model, tokenizer, prompt,
-                    config.max_tokens, config.temperature, is_warmup=True,
+                    prompt.max_tokens or config.max_tokens, config.temperature, is_warmup=True,
                 )
                 vr.runs.append(result)
+                on_progress(ProgressEvent(
+                    stage="warmup",
+                    family_name=family.name,
+                    variant_repo=variant.repo,
+                    variant_quant=variant.quant,
+                    prompt_id=prompt.id,
+                    run_index=i + 1,
+                    total_runs=config.warmup_runs,
+                    current_result=result,
+                    overall_progress=overall_progress,
+                ))
             except Exception as e:
                 logger.warning("Warmup run failed for %s on %s: %s", variant.repo, prompt.id, e)
 
@@ -242,7 +260,7 @@ def _run_variant(
             try:
                 result = measure_one(
                     variant, family.kind, model, tokenizer, prompt,
-                    config.max_tokens, config.temperature, is_warmup=False,
+                    prompt.max_tokens or config.max_tokens, config.temperature, is_warmup=False,
                 )
                 vr.runs.append(result)
                 on_progress(ProgressEvent(
