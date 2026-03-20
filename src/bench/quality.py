@@ -106,9 +106,11 @@ def eval_mmlu(model: Any, tokenizer: Any, questions_path: str | Path) -> tuple[f
 
         # Generate a short response
         from mlx_lm import generate
+        from mlx_lm.generate import make_sampler
 
         response = generate(
-            model, tokenizer, prompt=formatted, max_tokens=5, temp=0.0, verbose=False
+            model, tokenizer, prompt=formatted, max_tokens=5,
+            sampler=make_sampler(temp=0.0), verbose=False,
         )
 
         # Extract the answer letter from response

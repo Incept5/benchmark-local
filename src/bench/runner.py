@@ -321,7 +321,7 @@ def _run_variant(
     # Unload model to free memory
     del model, tokenizer
     gc.collect()
-    mx.metal.reset_peak_memory()
+    mx.reset_peak_memory()
 
     return vr
 

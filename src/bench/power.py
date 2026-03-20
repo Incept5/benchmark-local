@@ -26,6 +26,18 @@ class PowerMonitor:
         self._monitor = None
         self._available = False
         try:
+            # Patch zeus 0.15.0 bug: DeprecatedAliasABCMeta registers
+            # "zeroAllFields" as abstract but the concrete implementation
+            # only defines "zero_all_fields", making the class uninstantiable.
+            from zeus.device.soc.apple import AppleSiliconMeasurement
+
+            if "zeroAllFields" in getattr(
+                AppleSiliconMeasurement, "__abstractmethods__", frozenset()
+            ):
+                AppleSiliconMeasurement.__abstractmethods__ = (
+                    AppleSiliconMeasurement.__abstractmethods__ - {"zeroAllFields"}
+                )
+
             from zeus.monitor.energy import ZeusMonitor
 
             self._monitor = ZeusMonitor(approx_instant_energy=True)

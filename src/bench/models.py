@@ -66,6 +66,7 @@ def _generate_text(
 ) -> Iterator[str]:
     """Stream text generation using mlx_lm."""
     from mlx_lm import stream_generate
+    from mlx_lm.generate import make_sampler
 
     messages = [{"role": "user", "content": prompt.text}]
 
@@ -76,12 +77,13 @@ def _generate_text(
     else:
         formatted = prompt.text
 
+    sampler = make_sampler(temp=temperature)
     for response in stream_generate(
         model,
         tokenizer,
         prompt=formatted,
         max_tokens=max_tokens,
-        temp=temperature,
+        sampler=sampler,
     ):
         yield response.text
 

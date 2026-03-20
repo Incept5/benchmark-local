@@ -39,7 +39,7 @@ def measure_one(
 ) -> RunResult:
     """Run one generation and measure performance metrics."""
     # Reset peak memory counter
-    mx.metal.reset_peak_memory()
+    mx.reset_peak_memory()
 
     tokens: list[str] = []
     ttft_ms = 0.0
@@ -71,7 +71,7 @@ def measure_one(
             num_tokens = len(tokenizer_or_processor.tokenizer.encode(output_text))
 
     tokens_per_sec = num_tokens / generation_time if generation_time > 0 else 0.0
-    peak_memory = mx.metal.get_peak_memory()
+    peak_memory = mx.get_peak_memory()
 
     return RunResult(
         variant_repo=variant.repo,
