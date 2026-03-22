@@ -31,15 +31,7 @@ cd MacOS-MLX-Benchmark
 uv sync
 ```
 
-This installs all core dependencies including power measurement (mlx-lm, textual, zeus-ml). Models are downloaded automatically on first run.
-
-### 3. Optional: Vision model support
-
-```bash
-uv sync --extra vision
-```
-
-Only needed if you want to benchmark vision models (e.g. Qwen2.5-VL). Text-only benchmarking works without this.
+This installs all dependencies (mlx-lm, mlx-vlm, textual, zeus-ml). Models are downloaded automatically on first run.
 
 ## Quick Start
 
@@ -161,7 +153,7 @@ uv run bench --config configs/my_bench.toml --no-tui
 
 - **Per-prompt max_tokens**: Each prompt in the suite can set its own `max_tokens` to reflect realistic output lengths (64 for short QA, 4096 for essays). The config-level `max_tokens` is the fallback default.
 - **Families with one variant** still get perplexity and MMLU but skip output similarity comparison.
-- **Vision models** (`kind = "vision"`) run all prompts including image-based ones; text models skip image prompts automatically. Requires `uv sync --extra vision`.
+- **Vision models** (`kind = "vision"`) run all prompts including image-based ones; text models skip image prompts automatically.
 - **Large models** that exceed available memory are caught gracefully — the runner logs the OOM and continues to the next variant.
 - The **`reference`** variant is the quality baseline. Results show metrics like "4-bit is 1.6x faster, uses 0.5x memory, with 5% perplexity increase vs 8-bit."
 
@@ -223,7 +215,7 @@ The default config (`configs/default.toml`) includes:
 | Llama 3.1 8B Instruct | 8B | bf16, 8bit, 4bit |
 | Qwen2.5 14B Instruct | 14B | bf16, 8bit, 4bit |
 | Llama 3.1 70B Instruct | 70B | 4bit |
-| Qwen2.5 VL 7B Instruct | 7B | 8bit, 4bit (vision, requires `uv sync --extra vision`) |
+| Qwen2.5 VL 7B Instruct | 7B | 8bit, 4bit (vision) |
 
 > **Note:** The full default config downloads many large models. Start with `configs/quick.toml` to verify your setup.
 
@@ -275,7 +267,7 @@ The HTML report includes:
 | Model download is slow | Models download from HuggingFace. Use `configs/quick.toml` for smaller models, or pre-download with `huggingface-cli download mlx-community/MODEL-NAME`. |
 | `zeus` install fails | Try `uv sync` again. If it persists, power metrics will be unavailable but the benchmark still runs. |
 | Out of memory | Remove large models from your config, or use 4-bit quantizations. The runner catches OOMs and continues. |
-| Vision models fail | Install vision support: `uv sync --extra vision` |
+| Vision models fail | Run `uv sync` to ensure mlx-vlm is installed. Check that image files exist in `prompts/images/`. |
 
 ## Project Structure
 

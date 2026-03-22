@@ -7,13 +7,10 @@ license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = [
     "mlx-lm>=0.21",
+    "mlx-vlm>=0.1",
     "textual>=1.0",
     "zeus[apple]",
 ]
-
-[project.optional-dependencies]
-vision = ["mlx-vlm>=0.1"]
-all = ["mlx-vlm>=0.1"]
 
 [project.scripts]
 bench = "bench.cli:main"
