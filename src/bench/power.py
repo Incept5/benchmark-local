@@ -51,10 +51,9 @@ class PowerMonitor:
             metrics = self._soc.get_available_metrics()
             logger.info("Power monitoring initialized, metrics: %s", metrics)
         except Exception as e:
-            logger.error(
-                "Failed to initialize power monitoring: %s. "
-                "Power metrics will be unavailable. "
-                "Install with: uv add 'zeus[apple]'",
+            logger.info(
+                "Power monitoring not available (%s). "
+                "To enable tokens/watt metrics, run: uv sync --extra power",
                 e,
             )
 
