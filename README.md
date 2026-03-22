@@ -31,22 +31,15 @@ cd MacOS-MLX-Benchmark
 uv sync
 ```
 
-This installs the core dependencies (mlx-lm, textual). Models are downloaded automatically on first run.
+This installs all core dependencies including power measurement (mlx-lm, textual, zeus-ml). Models are downloaded automatically on first run.
 
-### 3. Optional extras
+### 3. Optional: Vision model support
 
 ```bash
-# Vision model support (mlx-vlm)
 uv sync --extra vision
-
-# Power measurement (tokens/watt via zeus-ml)
-uv sync --extra power
-
-# Everything
-uv sync --extra all
 ```
 
-Power measurement uses Apple's IOKit APIs (no sudo required). If you skip this, the benchmark runs normally — power columns just show as empty.
+Only needed if you want to benchmark vision models (e.g. Qwen2.5-VL). Text-only benchmarking works without this.
 
 ## Quick Start
 
@@ -180,7 +173,7 @@ uv run bench --config configs/my_bench.toml --no-tui
 |--------|-------------|--------|
 | **TTFT** | Time to first token (ms) | `time.perf_counter()` from prompt submit to first yielded token |
 | **Tokens/sec** | Generation throughput | `tokens_generated / generation_time` |
-| **Tokens/watt** | Energy efficiency | `tokens_per_sec / avg_combined_watts` via [zeus-ml](https://github.com/ml-energy/zeus) (requires `--extra power`) |
+| **Tokens/watt** | Energy efficiency | `tokens_per_sec / avg_combined_watts` via [zeus-ml](https://github.com/ml-energy/zeus) |
 | **Peak memory** | GPU memory high-water mark | `mx.get_peak_memory()` |
 
 ### Quality
@@ -230,7 +223,7 @@ The default config (`configs/default.toml`) includes:
 | Llama 3.1 8B Instruct | 8B | bf16, 8bit, 4bit |
 | Qwen2.5 14B Instruct | 14B | bf16, 8bit, 4bit |
 | Llama 3.1 70B Instruct | 70B | 4bit |
-| Qwen2.5 VL 7B Instruct | 7B | 8bit, 4bit (vision, requires `--extra vision`) |
+| Qwen2.5 VL 7B Instruct | 7B | 8bit, 4bit (vision, requires `uv sync --extra vision`) |
 
 > **Note:** The full default config downloads many large models. Start with `configs/quick.toml` to verify your setup.
 
@@ -259,13 +252,7 @@ Text models run the 7 text prompts. Vision models run all 14. All vision test im
 
 ## Power Measurement
 
-Power metrics (tokens/watt) require the optional `zeus-ml` dependency:
-
-```bash
-uv sync --extra power
-```
-
-This uses Apple Silicon power counters via IOKit — no sudo required. If not installed, the benchmark runs normally and power columns show as empty.
+Power metrics (tokens/watt) use [zeus-ml](https://github.com/ml-energy/zeus) which reads Apple Silicon power counters via IOKit — no sudo required. This is included in the base install.
 
 ## Results
 
@@ -286,7 +273,7 @@ The HTML report includes:
 | `uv: command not found` | Install uv: `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 | `mlx` fails to import | Must be on Apple Silicon (M1+). Intel Macs are not supported. |
 | Model download is slow | Models download from HuggingFace. Use `configs/quick.toml` for smaller models, or pre-download with `huggingface-cli download mlx-community/MODEL-NAME`. |
-| `zeus` install fails | Power measurement is optional. Run `uv sync` without `--extra power`. |
+| `zeus` install fails | Try `uv sync` again. If it persists, power metrics will be unavailable but the benchmark still runs. |
 | Out of memory | Remove large models from your config, or use 4-bit quantizations. The runner catches OOMs and continues. |
 | Vision models fail | Install vision support: `uv sync --extra vision` |
 

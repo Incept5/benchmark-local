@@ -697,15 +697,12 @@ source = { editable = "." }
 dependencies = [
     { name = "mlx-lm" },
     { name = "textual" },
+    { name = "zeus", extra = ["apple"] },
 ]
 
 [package.optional-dependencies]
 all = [
     { name = "mlx-vlm" },
-    { name = "zeus", extra = ["apple"] },
-]
-power = [
-    { name = "zeus", extra = ["apple"] },
 ]
 vision = [
     { name = "mlx-vlm" },
@@ -717,10 +714,9 @@ requires-dist = [
     { name = "mlx-vlm", marker = "extra == 'all'", specifier = ">=0.1" },
     { name = "mlx-vlm", marker = "extra == 'vision'", specifier = ">=0.1" },
     { name = "textual", specifier = ">=1.0" },
-    { name = "zeus", extras = ["apple"], marker = "extra == 'all'" },
-    { name = "zeus", extras = ["apple"], marker = "extra == 'power'" },
+    { name = "zeus", extras = ["apple"] },
 ]
-provides-extras = ["vision", "power", "all"]
+provides-extras = ["vision", "all"]
 
 [[package]]
 name = "markdown-it-py"
