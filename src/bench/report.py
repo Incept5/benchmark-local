@@ -57,6 +57,7 @@ def _build_html(session: SessionResult) -> str:
                 "quant": var["quant"],
                 "repo": var["repo"],
                 "reference": fam["reference"],
+                "context_tokens": fam.get("context_tokens", 0),
             }
             family_variants[fam["name"]].append(key)
 
@@ -100,6 +101,7 @@ def _build_html(session: SessionResult) -> str:
     parts.append(_info_card("Python", sys.get("python_version", "?")))
     parts.append(_info_card("MLX", sys.get("mlx_version", "?") or "—"))
     parts.append(_info_card("mlx_lm", sys.get("mlx_lm_version", "?") or "—"))
+    parts.append(_info_card("mlx_vlm", sys.get("mlx_vlm_version", "?") or "—"))
     parts.append("</div>")
 
     parts.append('<div class="info-grid">')
@@ -107,8 +109,14 @@ def _build_html(session: SessionResult) -> str:
     parts.append(_info_card("Measured Runs", str(cfg.get("measured_runs", "?"))))
     parts.append(_info_card("Max Tokens", str(cfg.get("max_tokens", "?"))))
     parts.append(_info_card("Temperature", str(cfg.get("temperature", "?"))))
+    parts.append(_info_card("MMLU-Pro", cfg.get("mmlu_size", "tiny")))
     parts.append("</div>")
     parts.append("</section>")
+
+    # Architecture notes for non-standard models
+    arch_note = _html_architecture_notes(families)
+    if arch_note:
+        parts.append(arch_note)
 
     # Summary table
     parts.append('<section>')
@@ -119,7 +127,7 @@ def _build_html(session: SessionResult) -> str:
                  '<b>Decode</b> is how fast it writes the response — this is the speed you feel during streaming. '
                  '<b>tok/W</b> shows energy efficiency — higher means more output per watt of power. '
                  '<b>Perplexity</b> measures language understanding (lower = smarter). '
-                 '<b>MMLU</b> is accuracy on knowledge questions (higher = smarter).</p>')
+                 '<b>MMLU-Pro</b> is accuracy on 10-choice knowledge questions (higher = smarter).</p>')
     parts.append(_summary_table(agg, qual, pwr, tc, variant_info))
     parts.append("</section>")
 
@@ -152,6 +160,18 @@ def _build_html(session: SessionResult) -> str:
                  'The <b>95% CI</b> is the confidence interval for decode speed.</p>')
     parts.append(_prompt_table(prompt_data, variant_info))
     parts.append("</section>")
+
+    # Batch throughput
+    batch = session.batch
+    if batch:
+        parts.append('<section>')
+        parts.append("<h2>Batch Throughput</h2>")
+        parts.append('<p class="section-desc">Aggregate throughput with multiple concurrent requests using '
+                     '<code>mlx_lm.batch_generate</code>. Higher batch sizes increase total tokens/sec '
+                     'by better utilising memory bandwidth, at the cost of per-request latency. '
+                     '<b>vs single</b> shows the speedup compared to single-request decode speed.</p>')
+        parts.append(_batch_table_html(batch, agg, variant_info))
+        parts.append("</section>")
 
     # Power details
     if pwr:
@@ -199,6 +219,30 @@ def _build_html(session: SessionResult) -> str:
     return "\n".join(parts)
 
 
+def _html_architecture_notes(families: list[dict]) -> str:
+    """Generate an HTML callout for non-standard model architectures."""
+    qwen35 = [f for f in families if "qwen3.5" in f.get("name", "").lower()]
+    if not qwen35:
+        return ""
+    names = ", ".join(f["name"] for f in qwen35)
+    return (
+        '<section class="arch-notes">'
+        "<h2>Architecture Notes</h2>"
+        '<div style="background:var(--surface2);border-left:4px solid var(--yellow);padding:12px 16px;border-radius:4px;margin:8px 0;color:var(--text);">'
+        f"<b>{html.escape(names)}</b>: Hybrid <b>DeltaNet + Attention</b> architecture "
+        "(not a standard transformer). Each block of 4 layers uses 3 Gated DeltaNet "
+        "(linear attention) layers + 1 full attention layer. "
+        "Linear attention scales O(n) vs O(n\u00b2), so these models may behave differently "
+        "at long contexts. Quantization trade-offs are not directly comparable to pure "
+        "transformer models. "
+        "Qwen3.5 models are natively multimodal (vision+text). "
+        "<b>Thinking mode has been disabled</b> for these benchmarks to ensure measurements "
+        "reflect actual output, not internal reasoning chains."
+        "</div>"
+        "</section>"
+    )
+
+
 def _info_card(label: str, value: str) -> str:
     return (
         f'<div class="info-card">'
@@ -216,6 +260,11 @@ _HELP = {
     "Refusal Acc.": "Percentage of scenarios where the model correctly chose NOT to call a tool when the request didn't need one (e.g., casual conversation).",
     "Overall": "Combined accuracy across all tool calling scenarios — function selection + correct refusals.",
     "Tools": "Tool calling accuracy — how often the model correctly selects the right function and extracts the right parameters from natural language. Tests single-tool, multi-choice, parameter extraction, multi-step, and refusal scenarios. Critical for AI agent use cases like OpenClaw. (higher is better)",
+    "Batch": "Number of concurrent requests processed simultaneously using mlx_lm.batch_generate. Higher batch sizes increase aggregate throughput by better utilising memory bandwidth.",
+    "Gen tok/s": "Aggregate generation throughput across all batch items. Higher is better for server workloads.",
+    "Prefill tok/s": "Aggregate prompt processing throughput across all batch items.",
+    "vs single": "Speedup compared to single-request decode speed. Shows the benefit of batching.",
+    "Context": "Input context size in tokens — prompts are padded to this length. Smaller models use 4K, medium use 8K, large use 16K.",
     "Prefill": "Prompt processing speed in tokens/sec — how fast the model reads the input (higher is better). Scales with input length.",
     "Decode": "Token generation speed in tokens/sec — how fast the model produces output (higher is better). This is the sustained throughput.",
     "Model": "HuggingFace repo or local model directory name",
@@ -226,7 +275,7 @@ _HELP = {
     "Mem (MB)": "Peak GPU memory usage during generation in megabytes (lower means the model fits on smaller devices)",
     "Watts": "Average combined power draw (CPU + GPU + DRAM) during inference, measured via zeus-ml",
     "Perplexity": "Intrinsic language model quality on WikiText-2 sample — measures how well the model predicts text (lower is better)",
-    "MMLU": "Accuracy on a 100-question multiple-choice knowledge benchmark spanning STEM, humanities, social science, and general knowledge (higher is better)",
+    "MMLU-Pro": "Accuracy on MMLU-Pro — a 10-choice knowledge benchmark across 14 categories including STEM, law, business, and health (harder than standard MMLU; higher is better)",
     "vs ref": "Performance relative to the reference (highest precision) variant — e.g., 1.5x means 50% faster or 50% more memory",
     "PPL delta": "Perplexity change vs reference variant — positive means worse quality; <2% is negligible, >5% is significant",
     "Output Sim.": "Token-level F1 similarity between this variant's output and the reference variant's output (1.0 = identical, measures quantization drift)",
@@ -265,6 +314,8 @@ def _summary_table(
         info = variant_info.get(key, {})
         name = _short_name(key, variant_info)
         quant = info.get("quant", key.split("|")[-1])
+        ctx = info.get("context_tokens", 0)
+        ctx_str = f"{ctx // 1024}K" if ctx >= 1024 else str(ctx)
 
         ttft = _v(metrics.get("ttft_ms", {}), "median")
         prefill = _v(metrics.get("prefill_tps", {}), "median")
@@ -287,6 +338,7 @@ def _summary_table(
             f"<tr>"
             f"<td>{html.escape(name)}</td>"
             f'<td class="quant-badge"><span class="badge badge-{quant}">{html.escape(quant)}</span></td>'
+            f'<td class="num">{html.escape(ctx_str)}</td>'
             f'<td class="num">{_fmt(ttft, ".1f")}</td>'
             f'<td class="num">{_fmt(prefill, ".1f")}</td>'
             f'<td class="num">{_fmt(decode, ".1f")}</td>'
@@ -303,6 +355,7 @@ def _summary_table(
         '<table class="data-table sortable">'
         "<thead><tr>"
         f'{_th("Model")}{_th("Quant")}'
+        f'{_th("Context", "num")}'
         f'{_th("TTFT (ms)", "num")}'
         f'{_th("Prefill", "num")}'
         f'{_th("Decode", "num")}'
@@ -310,7 +363,7 @@ def _summary_table(
         f'{_th("Mem (MB)", "num")}'
         f'{_th("Watts", "num")}'
         f'{_th("Perplexity", "num")}'
-        f'{_th("MMLU", "num")}'
+        f'{_th("MMLU-Pro", "num")}'
         f'{_th("Tools", "num")}'
         "</tr></thead>"
         f"<tbody>{''.join(rows)}</tbody>"
@@ -566,6 +619,54 @@ def _tool_calling_table(tc: dict, variant_info: dict[str, dict]) -> str:
         f'{_th("Refusal Acc.", "num")}'
         f'{_th("Overall", "num")}'
         f'{_th("N", "num")}'
+        "</tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody>"
+        "</table>"
+    )
+
+
+def _batch_table_html(batch: dict, agg: dict, variant_info: dict[str, dict]) -> str:
+    rows: list[str] = []
+    for key, results in batch.items():
+        info = variant_info.get(key, {})
+        name = _short_name(key, variant_info)
+        quant = info.get("quant", key.split("|")[-1])
+
+        single_decode = None
+        if key in agg:
+            decode_metric = agg[key].get("decode_tps", {})
+            if isinstance(decode_metric, dict):
+                single_decode = decode_metric.get("median")
+
+        for br in results:
+            bs = br.get("batch_size", 0)
+            gen_tps = br.get("generation_tps", 0)
+            pre_tps = br.get("prefill_tps", 0)
+            mem = br.get("peak_memory_bytes", 0)
+            mem_mb = mem / (1024 ** 2) if mem else None
+            speedup = f"{gen_tps / single_decode:.2f}x" if single_decode and single_decode > 0 else "—"
+
+            rows.append(
+                f"<tr>"
+                f"<td>{html.escape(name)}</td>"
+                f'<td class="quant-badge"><span class="badge badge-{quant}">{html.escape(quant)}</span></td>'
+                f'<td class="num">{bs}</td>'
+                f'<td class="num">{_fmt(gen_tps, ".1f")}</td>'
+                f'<td class="num">{_fmt(pre_tps, ".1f")}</td>'
+                f'<td class="num">{speedup}</td>'
+                f'<td class="num">{_fmt(mem_mb, ".0f")}</td>'
+                f"</tr>"
+            )
+
+    return (
+        '<table class="data-table sortable">'
+        "<thead><tr>"
+        f'{_th("Model")}{_th("Quant")}'
+        f'{_th("Batch", "num")}'
+        f'{_th("Gen tok/s", "num")}'
+        f'{_th("Prefill tok/s", "num")}'
+        f'{_th("vs single", "num")}'
+        f'{_th("Mem (MB)", "num")}'
         "</tr></thead>"
         f"<tbody>{''.join(rows)}</tbody>"
         "</table>"

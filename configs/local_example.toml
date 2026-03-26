@@ -8,7 +8,7 @@
 #   uv run bench --config configs/my_local.toml
 
 [benchmark]
-warmup_runs = 3
+warmup_runs = 2
 measured_runs = 10
 max_tokens = 2048
 temperature = 0.0

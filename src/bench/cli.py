@@ -24,13 +24,44 @@ def main() -> None:
     )
     parser.add_argument(
         "--verbose", "-v",
+        action="count",
+        default=0,
+        help="Increase logging verbosity (-v for INFO, -vv for DEBUG)",
+    )
+    parser.add_argument(
+        "--quick",
         action="store_true",
-        help="Enable verbose logging",
+        help="Quick mode: 1 warmup, 1 measured run, 2 representative prompts",
+    )
+    parser.add_argument(
+        "--mmlu-size",
+        choices=["tiny", "small", "medium", "full"],
+        default=None,
+        help="MMLU-Pro subset: tiny=5%% (~600q), small=10%%, medium=25%%, full=100%% (default: from config or tiny)",
+    )
+    parser.add_argument(
+        "--discover",
+        metavar="FILTER",
+        nargs="?",
+        const="all",
+        help='Discover LM Studio MLX models and generate a config. '
+             'Filter by "family:size" e.g. "Qwen3.5:9B", "Qwen3.5", or "all"',
     )
     args = parser.parse_args()
 
+    # Handle --discover before anything else
+    if args.discover is not None:
+        _run_discover(args.discover)
+        return
+
+    if args.verbose >= 2:
+        log_level = logging.DEBUG
+    elif args.verbose >= 1:
+        log_level = logging.INFO
+    else:
+        log_level = logging.WARNING
     logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
+        level=log_level,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
@@ -45,10 +76,62 @@ def main() -> None:
         print(f"Error loading config: {e}", file=sys.stderr)
         sys.exit(1)
 
+    if args.quick:
+        config.quick = True
+        from bench.config import QUICK_CONTEXT_TOKENS
+        for family in config.model_families:
+            family.context_tokens = QUICK_CONTEXT_TOKENS
+        # Default to tiny MMLU-Pro in quick mode unless explicitly overridden
+        if not args.mmlu_size:
+            config.mmlu_size = "tiny"
+    if args.mmlu_size:
+        config.mmlu_size = args.mmlu_size
+
     if args.no_tui:
         _run_cli(config)
     else:
         _run_tui(config)
+
+
+def _run_discover(filter_str: str) -> None:
+    """Discover models and generate/print config."""
+    from bench.discover import discover_models, group_models, generate_toml, print_discovery
+
+    # Parse filter
+    base_family = None
+    size = None
+    if filter_str and filter_str != "all":
+        parts = filter_str.split(":")
+        base_family = parts[0]
+        if len(parts) > 1:
+            size = parts[1]
+
+    models = discover_models(base_family=base_family, size=size)
+    if not models:
+        print(f"No MLX models found matching filter '{filter_str}'")
+        print("Searched: ~/.lmstudio/models/")
+        return
+
+    # Print summary
+    print_discovery(models)
+
+    # Generate and save config
+    groups = group_models(models)
+    toml_content = generate_toml(groups)
+
+    if size:
+        filename = f"configs/discovered-{base_family.lower()}-{size.lower()}.toml"
+    elif base_family:
+        filename = f"configs/discovered-{base_family.lower()}.toml"
+    else:
+        filename = "configs/discovered-all.toml"
+
+    from pathlib import Path
+    path = Path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(toml_content)
+    print(f"\nConfig written to: {filename}")
+    print(f"Run with: bench --config {filename} --no-tui --quick")
 
 
 def _run_tui(config: BenchmarkConfig) -> None:
@@ -99,9 +182,17 @@ def _run_cli(config: BenchmarkConfig) -> None:
         elif event.stage == "done":
             print(f"\n{event.message}")
 
-    print(f"MacOS-MLX-Benchmark — {len(config.model_families)} model families")
-    print(f"  warmup={config.warmup_runs} measured={config.measured_runs} "
-          f"max_tokens={config.max_tokens} temp={config.temperature}")
+    mode_label = " [QUICK]" if config.quick else ""
+    print(f"MacOS-MLX-Benchmark{mode_label} — {len(config.model_families)} model families")
+    if config.quick:
+        from bench.config import QUICK_PROMPT_IDS, QUICK_CONTEXT_TOKENS
+        print(f"  warmup=1 measured=1 context={QUICK_CONTEXT_TOKENS} "
+              f"prompts={','.join(QUICK_PROMPT_IDS)} "
+              f"max_tokens={config.max_tokens} temp={config.temperature}")
+    else:
+        print(f"  warmup={config.warmup_runs} measured={config.measured_runs} "
+              f"(large models ≥{config.large_model_threshold_b:.0f}B: {config.large_model_measured_runs}) "
+              f"max_tokens={config.max_tokens} temp={config.temperature}")
     print()
 
     session = run_benchmark(config, on_progress=on_progress)
@@ -135,7 +226,7 @@ def _print_summary(session) -> None:
     # Header
     print(
         f"{'Model':<40} {'TTFT(ms)':>9} {'Prefill':>9} {'Decode':>9} {'tok/W':>8} "
-        f"{'Mem(MB)':>9} {'PPL':>8} {'MMLU%':>7}"
+        f"{'Mem(MB)':>9} {'PPL':>8} {'MMLU-Pro%':>9}"
     )
     print("-" * 110)
 

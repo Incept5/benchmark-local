@@ -1,0 +1,36 @@
+# Qwen3.5 4B + distilled variant — with batch 1 and 16
+
+[benchmark]
+warmup_runs = 2
+measured_runs = 10
+max_tokens = 2048
+temperature = 0.0
+randomize_order = true
+prompt_suite = "prompts/suite.toml"
+output_dir = "results"
+batch_sizes = [1, 16]
+batch_runs = 3
+
+# --- Qwen3.5 4B ---
+[[model_family]]
+name = "Qwen3.5 4B"
+kind = "text"
+size = "4B"
+variants = [
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-4B-MLX-bf16", quant = "bf16" },
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-4B-MLX-8bit", quant = "8bit" },
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-4B-MLX-4bit", quant = "4bit" },
+]
+reference = "bf16"
+
+# --- Qwen3.5 4B Claude Reasoning Distilled v2 (Jackrong) ---
+[[model_family]]
+name = "Qwen3.5 4B Claude Reasoning v2"
+kind = "text"
+size = "4B"
+variants = [
+    { repo = "/Users/jdavies/.lmstudio/models/Jackrong/MLX-Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-v2-bf16", quant = "bf16" },
+    { repo = "/Users/jdavies/.lmstudio/models/Jackrong/MLX-Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-v2-8bit", quant = "8bit" },
+    { repo = "/Users/jdavies/.lmstudio/models/Jackrong/MLX-Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-v2-4bit", quant = "4bit" },
+]
+reference = "bf16"

@@ -1,7 +1,7 @@
 # Qwen3.5 full benchmark — local models at /Volumes/MODELS/AI/MLX
 
 [benchmark]
-warmup_runs = 3
+warmup_runs = 2
 measured_runs = 10
 max_tokens = 2048
 temperature = 0.0

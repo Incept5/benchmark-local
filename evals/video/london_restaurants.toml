@@ -1,0 +1,43 @@
+# Video eval: London restaurants OCR extraction
+# Source: Screen recording of a short-form video listing 11 London restaurants
+# Video: 13.8s, 823 frames @ 59.6fps, portrait orientation (1080x2340 approx)
+#
+# Each restaurant name appears as a text overlay for ~1-1.5 seconds.
+# The video also contains non-restaurant text overlays:
+#   - Title card: "11 RESTAURANTS IN LONDON ONLY THE LOCALS KNOW ABOUT"
+#   - Watermark: "Prettylittlelondon"
+
+[video]
+file = "london_restaurants.mov"
+description = "11 London restaurants shown as text overlays in a short-form video"
+
+[query]
+prompt = """Each image is a frame from a video. \
+List every unique restaurant name shown as a text overlay. \
+Copy each name EXACTLY as written, including apostrophes and punctuation. \
+Output only a numbered list of names."""
+
+# Recommended settings discovered through experimentation:
+#   --multi-image mode: sends deduplicated frames as separate images in one query
+#   --fps 3-4: captures all 11 title cards (each shown ~1-1.5s)
+#   --temperature 0.5: balances accuracy with completeness
+#   --max-pixels 1024 1024: high enough resolution to read punctuation (e.g. apostrophes)
+#   --dedup-threshold 0.95: reduces ~40-54 frames down to ~12 unique scene changes
+#   Thinking must be DISABLED or model wastes token budget on chain-of-thought
+
+[ground_truth]
+# Exact names as they appear on screen, in order of appearance
+restaurants = [
+    "La Famiglia",
+    "Stanley's",
+    "French Society",
+    "Qarva",
+    "Morinoya",
+    "Brutto",
+    "Cacio e Pepe",
+    "Flour & Grape",
+    "Frederick's",
+    "Campania",
+    "Sino",
+]
+count = 11

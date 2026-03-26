@@ -15,3 +15,13 @@ results/
 *~
 .idea/
 .vscode/
+configs/lmstudio*.toml
+configs/discovered-*.toml
+# Video eval files (too large for git — download separately or use Git LFS)
+evals/video/*.mov
+evals/video/*.mp4
+evals/video/*.avi
+# MMLU-Pro dataset (downloaded from HuggingFace TIGER-Lab/MMLU-Pro)
+evals/mmlu_pro/
+# WikiText-2 full test set (downloaded from HuggingFace)
+evals/wikitext2_test.txt

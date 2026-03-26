@@ -1,11 +1,17 @@
 [benchmark]
-warmup_runs = 3
+warmup_runs = 2
 measured_runs = 10
+large_model_measured_runs = 3   # fewer iterations for large models (saves time)
+large_model_threshold_b = 12.0  # models >= this size (in B params) use fewer runs
 max_tokens = 2048
 temperature = 0.0
 randomize_order = true
 prompt_suite = "prompts/suite.toml"
 output_dir = "results"
+# Batch throughput: empty = skip batch benchmarking; e.g. [1, 4, 8, 16, 32]
+batch_sizes = []
+batch_runs = 3
+mmlu_size = "small"  # MMLU-Pro subset: tiny=5%, small=10%, medium=25%, full=100%
 
 # Models can be HuggingFace repo IDs (downloaded on first run) or local paths.
 # Organize by family to compare quantization levels of the same base model.

@@ -19,6 +19,7 @@ class SystemInfo:
     python_version: str = ""
     mlx_version: str = ""
     mlx_lm_version: str = ""
+    mlx_vlm_version: str = ""
 
     @classmethod
     def detect(cls) -> SystemInfo:
@@ -59,6 +60,12 @@ class SystemInfo:
             info.mlx_lm_version = mlx_lm.__version__
         except Exception:
             pass
+        try:
+            import mlx_vlm
+
+            info.mlx_vlm_version = mlx_vlm.__version__
+        except Exception:
+            pass
 
         return info
 
@@ -74,9 +81,10 @@ class SessionResult:
     tool_calling: dict[str, Any] = field(default_factory=dict)
     aggregated: dict[str, Any] = field(default_factory=dict)
     power: dict[str, Any] = field(default_factory=dict)
+    batch: dict[str, Any] = field(default_factory=dict)
 
 
-def save_session(result: SessionResult, output_dir: str | Path) -> Path:
+def save_session(result: SessionResult, output_dir: str | Path, config_name: str = "") -> Path:
     """Save a session result to a JSON file. Returns the path."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -84,7 +92,10 @@ def save_session(result: SessionResult, output_dir: str | Path) -> Path:
     timestamp = result.timestamp or datetime.now(timezone.utc).strftime(
         "%Y%m%d_%H%M%S"
     )
-    filename = f"bench_{timestamp}.json"
+    if config_name:
+        filename = f"bench-{timestamp}-{config_name}.json"
+    else:
+        filename = f"bench_{timestamp}.json"
     path = output_dir / filename
 
     with open(path, "w") as f:
@@ -109,6 +120,7 @@ def load_session(path: str | Path) -> SessionResult:
         tool_calling=data.get("tool_calling", {}),
         aggregated=data.get("aggregated", {}),
         power=data.get("power", {}),
+        batch=data.get("batch", {}),
     )
 
 

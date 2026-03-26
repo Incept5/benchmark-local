@@ -1,0 +1,55 @@
+# Qwen3.5 medium models: 9B + distilled/abliterated variants
+
+[benchmark]
+warmup_runs = 2
+measured_runs = 10
+max_tokens = 2048
+temperature = 0.0
+randomize_order = true
+prompt_suite = "prompts/suite.toml"
+output_dir = "results"
+batch_sizes = [1]
+batch_runs = 3
+
+# --- Qwen3.5 9B ---
+[[model_family]]
+name = "Qwen3.5 9B"
+kind = "text"
+size = "9B"
+variants = [
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-9B-MLX-bf16", quant = "bf16" },
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-9B-MLX-8bit", quant = "8bit" },
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-9B-MLX-4bit", quant = "4bit" },
+]
+reference = "bf16"
+
+# --- Qwen3.5 9B Claude Reasoning Distilled v2 (Jackrong) ---
+[[model_family]]
+name = "Qwen3.5 9B Claude Reasoning v2"
+kind = "text"
+size = "9B"
+variants = [
+    { repo = "/Users/jdavies/.lmstudio/models/Jackrong/MLX-Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-v2-4bit", quant = "4bit" },
+]
+reference = "4bit"
+
+# --- Qwen3.5 9B Claude HighIQ Heretic Uncensored (TheCluster) ---
+[[model_family]]
+name = "Qwen3.5 9B Claude HighIQ Uncensored"
+kind = "text"
+size = "9B"
+variants = [
+    { repo = "/Users/jdavies/.lmstudio/models/TheCluster/Qwen3.5-9B-Claude-4.6-HighIQ-INSTRUCT-HERETIC-UNCENSORED-MLX-mxfp8", quant = "mxfp8" },
+]
+reference = "mxfp8"
+
+# --- Qwen3.5 9B Abliterated (huihui-ai / vanch007) ---
+[[model_family]]
+name = "Qwen3.5 9B Abliterated"
+kind = "text"
+size = "9B"
+variants = [
+    { repo = "/Users/jdavies/.lmstudio/models/vanch007/Huihui-Qwen3.5-9B-abliterated-mlx-bf16", quant = "bf16" },
+    { repo = "/Users/jdavies/.lmstudio/models/huihui-ai/Huihui-Qwen3.5-9B-abliterated-mlx-4bit", quant = "4bit" },
+]
+reference = "bf16"

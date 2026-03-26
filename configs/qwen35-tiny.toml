@@ -1,0 +1,36 @@
+# Qwen3.5 small models: 2B and 0.8B
+
+[benchmark]
+warmup_runs = 2
+measured_runs = 10
+max_tokens = 2048
+temperature = 0.0
+randomize_order = true
+prompt_suite = "prompts/suite.toml"
+output_dir = "results"
+batch_sizes = [1]
+batch_runs = 3
+
+# --- Qwen3.5 2B ---
+[[model_family]]
+name = "Qwen3.5 2B"
+kind = "text"
+size = "2B"
+variants = [
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-2B-MLX-bf16", quant = "bf16" },
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-2B-MLX-8bit", quant = "8bit" },
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-2B-MLX-4bit", quant = "4bit" },
+]
+reference = "bf16"
+
+# --- Qwen3.5 0.8B ---
+[[model_family]]
+name = "Qwen3.5 0.8B"
+kind = "text"
+size = "0.8B"
+variants = [
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-0.8B-MLX-bf16", quant = "bf16" },
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-0.8B-MLX-8bit", quant = "8bit" },
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-0.8B-MLX-4bit", quant = "4bit" },
+]
+reference = "bf16"

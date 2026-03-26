@@ -71,6 +71,17 @@ def generate_stream(
         )
 
 
+def _is_qwen35_model(tokenizer: Any) -> bool:
+    """Detect Qwen3.5 models by checking tokenizer config for model_type or special tokens."""
+    # Check name_or_path on the tokenizer
+    name = getattr(tokenizer, "name_or_path", "") or ""
+    if "qwen3.5" in name.lower() or "qwen3_5" in name.lower():
+        return True
+    # Check for Qwen3.5 special tokens (DeltaNet hybrid architecture)
+    vocab = getattr(tokenizer, "get_vocab", lambda: {})()
+    return "<tool_call>" in vocab and "<think>" in vocab and len(vocab) > 240000
+
+
 def _generate_text(
     model: Any,
     tokenizer: Any,
@@ -85,8 +96,18 @@ def _generate_text(
     messages = [{"role": "user", "content": prompt.text}]
 
     if hasattr(tokenizer, "apply_chat_template"):
+        # Qwen3.5 has thinking mode enabled by default which inflates output
+        # tokens and pollutes throughput measurements.  Keep it on for
+        # reasoning prompts so we actually benchmark the thinking capability.
+        template_kwargs: dict[str, Any] = {}
+        if _is_qwen35_model(tokenizer):
+            is_reasoning = prompt.id in ("reasoning",)
+            template_kwargs["enable_thinking"] = is_reasoning
+            logger.debug("Qwen3.5 detected — thinking mode %s for [%s]",
+                         "enabled" if is_reasoning else "disabled", prompt.id)
         formatted = tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
+            messages, tokenize=False, add_generation_prompt=True,
+            **template_kwargs,
         )
     else:
         formatted = prompt.text

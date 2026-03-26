@@ -1,0 +1,44 @@
+# Qwen3.5 similar-size comparison: 0.8B bf16 vs 2B 8bit vs 4B 4bit
+# All roughly ~1.6GB on disk — tests whether more params at lower precision beats fewer at full precision
+
+[benchmark]
+warmup_runs = 2
+measured_runs = 10
+max_tokens = 2048
+temperature = 0.0
+randomize_order = true
+prompt_suite = "prompts/suite.toml"
+output_dir = "results"
+batch_sizes = []
+batch_runs = 3
+mmlu_size = "small"
+
+# --- 0.8B bf16 (~1.6GB) ---
+[[model_family]]
+name = "Qwen3.5 0.8B"
+kind = "text"
+size = "0.8B"
+variants = [
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-0.8B-MLX-bf16", quant = "bf16" },
+]
+reference = "bf16"
+
+# --- 2B 8bit (~2GB) ---
+[[model_family]]
+name = "Qwen3.5 2B"
+kind = "text"
+size = "2B"
+variants = [
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-2B-MLX-8bit", quant = "8bit" },
+]
+reference = "8bit"
+
+# --- 4B 4bit (~2.2GB) ---
+[[model_family]]
+name = "Qwen3.5 4B"
+kind = "text"
+size = "4B"
+variants = [
+    { repo = "/Users/jdavies/.lmstudio/models/mlx-community/Qwen3.5-4B-MLX-4bit", quant = "4bit" },
+]
+reference = "4bit"
